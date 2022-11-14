@@ -10,6 +10,54 @@ double distanceBetweenPoints(cv::Point2f p1, cv::Point2f p2) {
 	cv::Vec2f v = p1 - p2;
 	return sqrt(v.dot(v));
 }
+
+
+int thresh_otsu(Mat input)
+{
+	int histogram[256] = { 0 };
+	double global_mean = 0;
+	for (int i = 1; i < input.rows; i++)
+	{
+		uchar *data = input.ptr<uchar>(i);
+		for (int j = 0; j < input.cols; j++)
+		{
+			histogram[data[j]]++;
+			global_mean += data[j];
+		}
+	}
+	global_mean /= (input.rows * input.cols);
+	int sum = 0;
+	double p1 = 0, p2 = 0, m1 = 0, m2 = 0;
+	double sg = 0;
+	double temp_sg = -1;
+	int k = 0;
+	for (int i = 0; i < 256; i++)
+	{
+		for (int j = 0; j <= i; j++)
+		{
+			p2 += histogram[j];
+			m2 += (histogram[j] * j);
+		}
+		m2 /= p2;
+		for (int j = i + 1; j < 256; j++)
+		{
+			p1 += histogram[j];
+			m1 += (histogram[j] * j);
+		}
+		m1 /= p1;
+		p2 /= (input.rows * input.cols);
+		p1 = 1 - p2;
+		sg = p1 * p2*(m1 - m2)*(m1 - m2);
+		if (sg > temp_sg)
+		{
+			temp_sg = sg;
+			k = i;
+		}
+		p1 = 0, p2 = 0, m1 = 0, m2 = 0;
+	}
+	//    cout<<"k = "<<k<<endl;
+	return k;
+}
 vector<cv::Mat> generateValidMat(cv::Size size, cv::Point2d center, double r, double magnification,double divide) {
 	double smallR = r / magnification, bigR = r * magnification;
 
@@ -48,7 +96,8 @@ int main()
 	addWeighted(sobelX, 0.5, sobelY, 0.5, 0, sobel);
 	vector<cv::Mat> validMat = generateValidMat(img.size(), cv::Point2d(175, 175), 75, 2,3);
 	bitwise_and(img, validMat[0], img);
-	threshold(img, img, 100, 255, CV_THRESH_BINARY);
+	int thresh=thresh_otsu(img);
+	threshold(img, img, thresh, 255, CV_THRESH_BINARY);
 
 
 	bitwise_and(sobel, validMat[0], sobel);
