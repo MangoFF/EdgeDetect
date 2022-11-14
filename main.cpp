@@ -43,10 +43,11 @@ int main()
 
 	Mat validMat = generateValidMat(img.size(), cv::Point2d(175, 175), 75, 2,5);
 	bitwise_and(img, validMat, img);
-	threshold(img, img, 125, 255, CV_THRESH_OTSU);
+	threshold(img, img, 100, 255, CV_THRESH_BINARY);
 	imshow("Image", img);
 	imshow("ValidMat", validMat);
 	waitKey(0); //显示图片不会一闪而过
 	return 0;
 }
+
 
