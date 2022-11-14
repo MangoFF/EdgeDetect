@@ -10,24 +10,28 @@ double distanceBetweenPoints(cv::Point2f p1, cv::Point2f p2) {
 	cv::Vec2f v = p1 - p2;
 	return sqrt(v.dot(v));
 }
-cv::Mat generateValidMat(cv::Size size, cv::Point2d center, double r, double magnification,double divide) {
+vector<cv::Mat> generateValidMat(cv::Size size, cv::Point2d center, double r, double magnification,double divide) {
 	double smallR = r / magnification, bigR = r * magnification;
 
-	cv::Mat validMat = cv::Mat::zeros(size, CV_8UC1);
+	vector<cv::Mat> mat_vector;
+	
+	for (int d = 0; d < divide; d++)
+	{
+		mat_vector.push_back(cv::Mat::zeros(size, CV_8UC1));
 	for (int i = 0; i < size.height; i++)
 		for (int j = 0; j < size.width; j++)
 		{
-			for (int d = 0; d < divide; d++)
-			{
+			
 				double angle = (PI / int(divide)) * d;
 				double k = tanf(angle);
 				double distance = distanceBetweenPoints(center, cv::Point2d(j, i));
 				if (distance >= smallR && distance <= bigR)
 				if (fabs(k * (i - center.x)- (j - center.y)) <10*sqrtf(1+powf(k,2)))
-					validMat.at<uchar>(i, j) = 255;
-			}
+					mat_vector[d].at<uchar>(i, j) = 255;
+			
 		}
-	return validMat;
+	}
+	return mat_vector;
 }
 int main()
 {
@@ -39,13 +43,19 @@ int main()
 	cv::Mat sobel;
 	cv::Sobel(img, sobelX, CV_16S, 1, 0);
 	cv::Sobel(img, sobelY, CV_16S, 0, 1);
-	sobel = abs(sobelX) + abs(sobelY);//计算L1范数
-
-	Mat validMat = generateValidMat(img.size(), cv::Point2d(175, 175), 75, 2,5);
-	bitwise_and(img, validMat, img);
+	convertScaleAbs(sobelX, sobelX);//计算L1范数
+	convertScaleAbs(sobelY, sobelY);//计算L1范数
+	addWeighted(sobelX, 0.5, sobelY, 0.5, 0, sobel);
+	vector<cv::Mat> validMat = generateValidMat(img.size(), cv::Point2d(175, 175), 75, 2,3);
+	bitwise_and(img, validMat[0], img);
 	threshold(img, img, 100, 255, CV_THRESH_BINARY);
+
+
+	bitwise_and(sobel, validMat[0], sobel);
 	imshow("Image", img);
-	imshow("ValidMat", validMat);
+	imshow("ValidMat[0]", validMat[0]);
+	imshow("ValidMat[1]", validMat[1]);
+	imshow("Sobel", sobel);
 	waitKey(0); //显示图片不会一闪而过
 	return 0;
 }
